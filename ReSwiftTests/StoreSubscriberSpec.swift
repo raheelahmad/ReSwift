@@ -51,11 +51,63 @@ class FilteredStoreSpec: QuickSpec {
                 expect(subscriber.receivedValue.0).to(equal(5))
                 expect(subscriber.receivedValue.1).to(equal("TestName"))
             }
+
+            it("can handle structs as a sub state") {
+                let reducer = AnotherStateReducer()
+                let store = Store(reducer: reducer, state: AnotherComplexState())
+                let subscriber = AnotherSubscriber()
+                store.subscribe(subscriber) { x in
+                    return SubState(val1: x.firstState, val2: x.secondState)
+                }
+                store.dispatch(ValueOneAction())
+                expect(subscriber.receivedValue?.val1).to(equal(1))
+            }
         }
 
     }
 
 }
+
+// ----
+
+struct AnotherComplexState: StateType {
+    var firstState: Int?
+    var secondState: String?
+}
+
+struct SubState {
+    var val1: Int?
+    var val2: String?
+}
+
+class AnotherSubscriber: StoreSubscriber {
+    var receivedValue: SubState?
+    var receivedString: String?
+
+    func newState(state: SubState?) {
+        receivedValue = state
+    }
+}
+
+struct AnotherStateReducer: Reducer {
+    func handleAction(action: Action, state: AnotherComplexState?) -> AnotherComplexState {
+        var nextState = state ?? AnotherComplexState()
+        switch action {
+        case is ValueOneAction:
+            nextState.firstState = 1
+        case is ValueTwoAction:
+            nextState.secondState = "2"
+        default:
+            break
+        }
+        return nextState
+    }
+}
+
+// ----
+
+struct ValueOneAction: Action { }
+struct ValueTwoAction: Action { }
 
 class TestFilteredSubscriber: StoreSubscriber {
     var receivedValue: Int?
